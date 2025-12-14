@@ -2,16 +2,32 @@ import datetime
 from enum import Enum
 from collections import defaultdict
 
+SCHEDULE_COLLECTION = "schedule2026_test"
+PREDICTION_COLLECTION = "2026_predictions"
+
+
+class MatchPredictionVariant(Enum):
+    PRECISE = 0
+    GENERAL = 1
+
 
 class TeamInfo:
-    def __init__(self, score: int, name: str, pic_url: str, abbr: str):
+    def __init__(
+        self,
+        is_placeholder: bool = True,
+        score: int = 0,
+        name: str = "",
+        pic_url: str = "",
+        abbr: str = "",
+    ):
+        self.is_placeholder = is_placeholder
         self.score = score
         self.name = name
         self.pic_url = pic_url
         self.abbr = abbr
 
 
-class MatchData:
+class MatchMetadata:
     def __init__(
         self,
         time: datetime.datetime,
@@ -25,20 +41,20 @@ class MatchData:
         self.match_length = match_length
 
 
-class GameInfo:
+class MatchInfo:
     MATCH_DURATION = datetime.timedelta(hours=1, minutes=30)
 
     def __init__(
         self,
         home: TeamInfo,
         away: TeamInfo,
-        data: MatchData,
+        metadata: MatchMetadata,
         id: str,
         is_completed: bool,
     ):
         self.home = home
         self.away = away
-        self.data = data
+        self.data = metadata
         self.id = id
         self.is_completed = is_completed
 
@@ -53,13 +69,8 @@ class GameInfo:
 
 
 class ScheduleInfo:
-    def __init__(self, matches: list[GameInfo]):
+    def __init__(self, matches: list[MatchInfo]):
         self.matches = matches
-
-
-class MatchPredictionVariant(Enum):
-    PRECISE = 0
-    GENERAL = 1
 
 
 class MatchPrediction:
@@ -103,6 +114,6 @@ class User:
                 )
 
     def _calculate_variant_score(
-        self, match: GameInfo, match_prediction: MatchPrediction
+        self, match: MatchInfo, match_prediction: MatchPrediction
     ):
         return match_prediction.home_score == match.home.score

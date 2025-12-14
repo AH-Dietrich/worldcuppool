@@ -1,15 +1,23 @@
-from schedule_fetcher import data_service
+from data_service import data_service
 from db import DbClient
-from models import User, ScheduleInfo, MatchPrediction, MatchPredictionVariant
-import asyncio
+from pymongo import UpdateOne
+from models import (
+    ScheduleInfo,
+    MatchPrediction,
+    MatchPredictionVariant,
+    SCHEDULE_COLLECTION,
+    PREDICTION_COLLECTION,
+)
+from flask import Flask, request
+import json
 
-SCHEDULE_COLLECTION = "schedule2026_test"
-PREDICTION_COLLECTION = "2026_predictions"
+
+app = Flask(__name__)
 
 
 async def populate_schedule_collection():
     db_client = DbClient()
-    db_connection = await db_client.get_connection()
+    db_connection = db_client.get_connection()
     db = db_connection.cluster0
 
     my_collection = db[SCHEDULE_COLLECTION]
@@ -21,30 +29,45 @@ async def populate_schedule_collection():
         my_collection.insert_one(game.todict())
 
 
-# add user prediction
-# update schedule data
-# populate schedule data
-async def add_user_prediction(user_id: str, prediction: MatchPrediction):
+@app.post("/addPrediction")
+def add_user_prediction():
     schedule = data_service.get_latest_schedule()
 
     if not schedule:
-        return
+        return json.dumps(500)
+
+    request_json = request.json
+
+    if not request_json:
+        return json.dumps(400)
+
+    predictions = request_json["predictions"]
+    user_id = request_json["user_id"]
 
     db_client = DbClient()
-    db_connection = await db_client.get_connection()
+    db_connection = db_client.get_connection()
     db = db_connection.cluster0
     prediction_collection = db[PREDICTION_COLLECTION]
 
-    result = prediction_collection.update_one(
-        {"user_id": user_id},
-        {"$set": {prediction.match_id: prediction.to_dict()}},
-        upsert=True,
-    )
+    write_requests = []
+
+    for prediction in predictions:
+        print(type(prediction))
+        print(prediction)
+        write_requests.append(
+            UpdateOne(
+                {"user_id": user_id},
+                {"$set": {prediction.match_id: prediction.to_dict()}},
+                upsert=True,
+            )
+        )
+    prediction_collection.bulk_write(write_requests)
+    return json.dumps(200)
 
 
-async def get_match_schedule() -> ScheduleInfo:
+def get_match_schedule() -> ScheduleInfo:
     db_client = DbClient()
-    db_connection = await db_client.get_connection()
+    db_connection = db_client.get_connection()
     db = db_connection.cluster0
     schedule_collection = db[SCHEDULE_COLLECTION]
 
@@ -60,11 +83,10 @@ async def update_match_schedule():
         return
 
     db_client = DbClient()
-    db_connection = await db_client.get_connection()
+    db_connection = db_client.get_connection()
     db = db_connection.cluster0
     schedule_collection = db[SCHEDULE_COLLECTION]
 
-    # ToDo add some field to know we don't need to update a field anymore
     for match in schedule.matches:
         result = schedule_collection.update_one(
             {"id": match.id, "is_completed": False}, {"$set": match.todict()}
@@ -72,9 +94,5 @@ async def update_match_schedule():
 
 
 if __name__ == "__main__":
-    # test1()
-    asyncio.run(
-        add_user_prediction(
-            "232", MatchPrediction(1, 2, "test", MatchPredictionVariant.GENERAL)
-        )
-    )
+    # app.run()
+    get_match_schedule()

@@ -8,12 +8,12 @@ class DbClient:
     def __init__(self):
         self.connection = None
 
-    async def get_connection(self):
+    def get_connection(self):
         if self.connection:
             return self.connection
-        return await self.connect()
+        return self.connect()
 
-    async def connect(self) -> MongoClient:
+    def connect(self) -> MongoClient:
         load_dotenv()
 
         uri = f"mongodb+srv://{os.getenv('MONGO_DB_USER')}:{os.getenv('MONGO_DB_PASS')}@cluster0.nersjol.mongodb.net/?appName=Cluster0"
