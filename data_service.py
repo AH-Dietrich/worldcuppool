@@ -10,8 +10,8 @@ class data_service:
         "Accept": "application/json, text/plain, */*",
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
     }
-    # URL = "https://api.fifa.com/api/v3/calendar/matches?language=en&count=500&idSeason=285023"
-    URL = "localhost:3002"
+    URL = "https://api.fifa.com/api/v3/calendar/matches?language=en&count=500&idSeason=285023"
+    # URL = "localhost:3002"
 
     @staticmethod
     def get_latest_schedule() -> ScheduleInfo:

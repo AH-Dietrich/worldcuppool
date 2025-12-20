@@ -4,29 +4,17 @@ from pymongo import UpdateOne
 from models import (
     ScheduleInfo,
     MatchPrediction,
+    MatchInfo,
     MatchPredictionVariant,
     SCHEDULE_COLLECTION,
     PREDICTION_COLLECTION,
 )
+from utils import as_match_info
 from flask import Flask, request
 import json
 
 
 app = Flask(__name__)
-
-
-async def populate_schedule_collection():
-    db_client = DbClient()
-    db_connection = db_client.get_connection()
-    db = db_connection.cluster0
-
-    my_collection = db[SCHEDULE_COLLECTION]
-    my_collection.drop()
-
-    schedule = data_service.get_latest_schedule()
-
-    for game in schedule.matches:
-        my_collection.insert_one(game.todict())
 
 
 @app.post("/addPrediction")
@@ -72,7 +60,11 @@ def get_match_schedule() -> ScheduleInfo:
     schedule_collection = db[SCHEDULE_COLLECTION]
 
     schedule = schedule_collection.find({}, {"_id": False})
-    matches = schedule.to_list()
+    matches: list[MatchInfo] = []
+
+    for match in schedule:
+        matches.append(as_match_info(match))
+
     return ScheduleInfo(matches)
 
 
@@ -93,6 +85,34 @@ async def update_match_schedule():
         )
 
 
+def get_missing_predictions(user_id: str):
+    db_client = DbClient()
+    db_connection = db_client.get_connection()
+    db = db_connection.cluster0
+    prediction_collection = db[PREDICTION_COLLECTION]
+
+    user_doc = prediction_collection.find_one({"user_id": user_id})
+
+    if not user_doc:
+        return
+
+    prediction_ids = set(m["id"] for m in user_doc["predictions"])
+
+    schedule_collection = db[SCHEDULE_COLLECTION]
+    schedule_cursor = schedule_collection.find(
+        {
+            "is_completed": False,
+            "home.is_placeholder": False,
+            "away.is_placeholder": False,
+        },
+        {"id": True, "_id": False},
+    )
+    match_ids = schedule_cursor.to_list()
+    match_ids = set(m["id"] for m in match_ids)
+
+    return match_ids - prediction_ids
+
+
 if __name__ == "__main__":
     # app.run()
-    get_match_schedule()
+    get_missing_predictions("123")
