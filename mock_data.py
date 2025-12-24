@@ -1,6 +1,6 @@
 from data_service import data_service
-from models import SCHEDULE_COLLECTION, PREDICTION_COLLECTION
 from db import DbClient
+from models import PREDICTION_COLLECTION, SCHEDULE_COLLECTION
 
 
 def populate_schedule_collection():

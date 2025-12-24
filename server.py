@@ -1,28 +1,73 @@
+import json
+from os import environ as env
+
+from authlib.integrations.flask_client import OAuth
+from dotenv import find_dotenv, load_dotenv
+from flask import Flask, redirect, request, session, url_for
+from pymongo import UpdateOne
+
 from data_service import data_service
 from db import DbClient
-from pymongo import UpdateOne
 from models import (
-    ScheduleInfo,
-    MatchPrediction,
-    MatchInfo,
-    MatchPredictionVariant,
-    SCHEDULE_COLLECTION,
     PREDICTION_COLLECTION,
+    SCHEDULE_COLLECTION,
+    USER_COLLECTION,
+    MatchInfo,
+    ScheduleInfo,
 )
 from utils import as_match_info
-from flask import Flask, request
-import json
+
+ENV_FILE = find_dotenv()
+if ENV_FILE:
+    load_dotenv(ENV_FILE)
 
 
 app = Flask(__name__)
+app.secret_key = env.get("APP_SECRET_KEY")
+
+oauth = OAuth(app)
+
+oauth.register(
+    "auth0",
+    client_id=env.get("AUTH0_CLIENT_ID"),
+    client_secret=env.get("AUTH0_CLIENT_SECRET"),
+    client_kwargs={
+        "scope": "openid profile email",
+    },
+    server_metadata_url=f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration',
+)
+
+db_client = DbClient()
+db = db_client.get_cluster_connection()
+
+
+@app.route("/login")
+def login():
+    if not oauth.auth0:
+        return json.dumps(500)
+    return oauth.auth0.authorize_redirect(
+        redirect_uri=url_for("callback", _external=True)
+    )
+
+
+@app.route("/callback", methods=["GET", "POST"])
+def callback():
+    if not oauth.auth0:
+        return json.dumps(500)
+    token = oauth.auth0.authorize_access_token()
+
+    save_user_info(token)
+    session["user"] = token
+
+    return redirect("/")
 
 
 @app.post("/addPrediction")
 def add_user_prediction():
-    schedule = data_service.get_latest_schedule()
+    token = session.get("user")
 
-    if not schedule:
-        return json.dumps(500)
+    if not token:
+        return json.dumps(403)
 
     request_json = request.json
 
@@ -30,23 +75,20 @@ def add_user_prediction():
         return json.dumps(400)
 
     predictions = request_json["predictions"]
-    user_id = request_json["user_id"]
+    user_id = token.get("userinfo", {}).get("sub", "")
 
-    db_client = DbClient()
-    db_connection = db_client.get_connection()
-    db = db_connection.cluster0
+    if not user_id:
+        return json.dumps(500)
+
     prediction_collection = db[PREDICTION_COLLECTION]
 
     write_requests = []
 
     for prediction in predictions:
-        print(type(prediction))
-        print(prediction)
         write_requests.append(
             UpdateOne(
                 {"user_id": user_id},
-                {"$set": {prediction.match_id: prediction.to_dict()}},
-                upsert=True,
+                {"$push": {"predictions": prediction}},
             )
         )
     prediction_collection.bulk_write(write_requests)
@@ -54,9 +96,6 @@ def add_user_prediction():
 
 
 def get_match_schedule() -> ScheduleInfo:
-    db_client = DbClient()
-    db_connection = db_client.get_connection()
-    db = db_connection.cluster0
     schedule_collection = db[SCHEDULE_COLLECTION]
 
     schedule = schedule_collection.find({}, {"_id": False})
@@ -74,21 +113,15 @@ async def update_match_schedule():
     if not schedule:
         return
 
-    db_client = DbClient()
-    db_connection = db_client.get_connection()
-    db = db_connection.cluster0
     schedule_collection = db[SCHEDULE_COLLECTION]
 
     for match in schedule.matches:
-        result = schedule_collection.update_one(
+        schedule_collection.update_one(
             {"id": match.id, "is_completed": False}, {"$set": match.todict()}
         )
 
 
 def get_missing_predictions(user_id: str):
-    db_client = DbClient()
-    db_connection = db_client.get_connection()
-    db = db_connection.cluster0
     prediction_collection = db[PREDICTION_COLLECTION]
 
     user_doc = prediction_collection.find_one({"user_id": user_id})
@@ -113,6 +146,20 @@ def get_missing_predictions(user_id: str):
     return match_ids - prediction_ids
 
 
+def save_user_info(token: dict):
+    user_id = token.get("userinfo", {}).get("sub", "")
+
+    if not user_id:
+        return
+
+    user_info = token.get("userinfo", {})
+
+    user_collection = db[USER_COLLECTION]
+    prediction_collection = db[PREDICTION_COLLECTION]
+
+    user_collection.update_one({"user_id": user_id}, {"$set": user_info}, upsert=True)
+    prediction_collection.insert_one({"user_id": user_id})
+
+
 if __name__ == "__main__":
-    # app.run()
-    get_missing_predictions("123")
+    app.run(port=5001)

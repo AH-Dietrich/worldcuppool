@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
-from models import MatchInfo, TeamInfo, MatchMetadata
+
+from models import MatchInfo, MatchMetadata, TeamInfo
 
 
 def get_predictions_needed(match_ids: set[str], prediction_ids: set[str]) -> list[str]:

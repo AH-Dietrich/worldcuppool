@@ -1,9 +1,10 @@
 import datetime
-from enum import Enum
 from collections import defaultdict
+from enum import Enum
 
 SCHEDULE_COLLECTION = "schedule2026_test"
 PREDICTION_COLLECTION = "2026_predictions"
+USER_COLLECTION = "2026_users"
 
 
 class MatchPredictionVariant(Enum):

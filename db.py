@@ -1,12 +1,16 @@
 import os
+
+from dotenv import load_dotenv
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
-from dotenv import load_dotenv
 
 
 class DbClient:
     def __init__(self):
         self.connection = None
+
+    def get_cluster_connection(self):
+        return self.get_connection().cluster0
 
     def get_connection(self):
         if self.connection:

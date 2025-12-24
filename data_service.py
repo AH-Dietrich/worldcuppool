@@ -1,8 +1,9 @@
-import requests
-import utils
-
 from datetime import datetime, timezone
-from models import ScheduleInfo, TeamInfo, MatchInfo, MatchMetadata
+
+import requests
+
+import utils
+from models import MatchInfo, MatchMetadata, ScheduleInfo, TeamInfo
 
 
 class data_service:
