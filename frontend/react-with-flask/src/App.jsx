@@ -3,6 +3,7 @@ import './App.css'
 import LoginButton from './components/LoginButton'
 import Profile from './components/Profile'
 import PredictionSwiper from './components/PredictionSwiper';
+import LogoutButton from "./components/LogoutButton";
 
 function App() {
   const { isAuthenticated, isLoading, error } = useAuth0();
@@ -33,7 +34,7 @@ function App() {
     <>
       <div>
         {isAuthenticated ? null : <LoginButton/>}
-        {isAuthenticated ? <div><Profile/><PredictionSwiper/></div> : null}
+        {isAuthenticated ? <div><LogoutButton/><Profile/><PredictionSwiper/></div> : null}
       </div>
     </>
   )

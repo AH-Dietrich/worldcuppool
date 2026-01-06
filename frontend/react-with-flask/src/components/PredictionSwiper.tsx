@@ -9,7 +9,6 @@ const PredictionSwiper = () =>
 
     useEffect(() => {
         const getPredictions = async () => {
-            console.log("hi")
             try
             {
                 const token = await getAccessTokenSilently();
@@ -33,6 +32,7 @@ const PredictionSwiper = () =>
     
     return (
         <div>
+            {matches.map((v,i) => <PredictionCard key={i} {...v}/>)}
         </div>
     )
 }
