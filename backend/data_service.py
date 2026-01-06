@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import requests
 
-import utils
+import utils as utils
 from models import MatchInfo, MatchMetadata, ScheduleInfo, TeamInfo
 
 

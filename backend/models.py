@@ -2,7 +2,7 @@ import datetime
 from collections import defaultdict
 from enum import Enum
 
-SCHEDULE_COLLECTION = "schedule2026_test"
+SCHEDULE_COLLECTION = "2026_schedule"
 PREDICTION_COLLECTION = "2026_predictions"
 USER_COLLECTION = "2026_users"
 
