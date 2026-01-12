@@ -19,8 +19,16 @@ class DbClient:
 
     def connect(self) -> MongoClient:
         load_dotenv()
+        uri = ""
+        if os.getenv("ENV") == "prod":
+            uri = f"mongodb+srv://{os.getenv('MONGO_DB_USER')}:{os.getenv('MONGO_DB_PASS')}@cluster0.nersjol.mongodb.net/?appName=Cluster0"
+        else:
+            uri = "mongodb://localhost:27017"
 
-        uri = f"mongodb+srv://{os.getenv('MONGO_DB_USER')}:{os.getenv('MONGO_DB_PASS')}@cluster0.nersjol.mongodb.net/?appName=Cluster0"
         client = MongoClient(uri, server_api=ServerApi("1"))
         self.connection = client
         return client
+
+
+hi = DbClient()
+hi.connect()
